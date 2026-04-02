@@ -1,0 +1,22 @@
+# Python virtual environment
+venv/
+env/
+ENV/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# SQLite local database (Keep your local data off GitHub)
+*.sqlite3
+
+# Environment variables (Where your secret keys live)
+.env
+
+# Static files (Render handles these via WhiteNoise)
+staticfiles/
+
+# OS generated files
+.DS_Store
+Thumbs.db
