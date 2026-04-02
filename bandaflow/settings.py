@@ -93,3 +93,8 @@ AUTH_USER_MODEL = 'kiosk.User'
 # Auth Redirects
 LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = '/dashboard/'
+# Security settings for production
+CSRF_TRUSTED_ORIGINS = [
+    'https://bandaflow-6.onrender.com',
+    'https://*.onrender.com'
+]
