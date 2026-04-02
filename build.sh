@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Exit immediately if a command exits with a non-zero status.
+# exit on error
 set -o errexit
 
-# 1. Combine the pip install command here
+# 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Add any other build steps (like migrations)
+# 2. Collect Static Files (This fixes the "Plain Text" look)
+python manage.py collectstatic --noinput
+
+# 3. Run Database Migrations
 python manage.py migrate
