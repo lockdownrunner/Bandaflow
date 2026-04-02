@@ -1,0 +1,125 @@
+{% extends 'kiosk/base.html' %}
+{% block title %}Dashboard — BandaFlow{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Dashboard</h2>
+    <p>Welcome back, {{ request.user.username }}. Here's your kiosk overview.</p>
+  </div>
+  <div id="today-date" style="font-size:.875rem;color:var(--text-secondary);font-weight:500;"></div>
+</div>
+
+<div class="page-body">
+  <div class="stats-grid" id="stats-grid">
+    <!-- Total Outstanding Balance -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div>
+          <div class="stat-label">Total Outstanding Balance</div>
+          <div class="stat-value" id="total-balance">—</div>
+        </div>
+        <div class="stat-icon gold">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+      </div>
+      <div class="stat-footer">
+        <span style="font-size:.8125rem;color:var(--text-muted);">Total owed to all suppliers</span>
+        <a href="/balances/" class="btn btn-sm btn-secondary">View More</a>
+      </div>
+    </div>
+
+    <!-- Payments Made This Month -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div>
+          <div class="stat-label">Payments This Month</div>
+          <div class="stat-value" id="payments-count">—</div>
+        </div>
+        <div class="stat-icon green">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </div>
+      <div class="ticker-wrap" id="payments-ticker"></div>
+      <div class="stat-footer">
+        <span style="font-size:.8125rem;color:var(--text-muted);">Payments recorded this month</span>
+        <a href="/transactions/?type=payment&month={{ current_month }}" class="btn btn-sm btn-secondary">View More</a>
+      </div>
+    </div>
+
+    <!-- Active Suppliers -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div>
+          <div class="stat-label">Active Suppliers</div>
+          <div class="stat-value" id="active-suppliers">—</div>
+        </div>
+        <div class="stat-icon blue">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:.8125rem;color:var(--text-secondary);">Currently active supplier accounts</div>
+      <div class="stat-footer">
+        <span style="font-size:.8125rem;color:var(--text-muted);">Active accounts</span>
+        <a href="/suppliers/?filter=active" class="btn btn-sm btn-secondary">View More</a>
+      </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div>
+          <div class="stat-label">Recent Transactions</div>
+          <div class="stat-value small" id="recent-count">—</div>
+        </div>
+        <div class="stat-icon red">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+      </div>
+      <div class="ticker-wrap" id="recent-ticker"></div>
+      <div class="stat-footer">
+        <span style="font-size:.8125rem;color:var(--text-muted);">Latest activity</span>
+        <a href="/transactions/" class="btn btn-sm btn-secondary">View All</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Set today's date
+  const now = new Date();
+  document.getElementById('today-date').textContent = now.toLocaleDateString('en-KE', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  async function loadDashboard() {
+    const data = await apiFetch('/api/dashboard/');
+
+    document.getElementById('total-balance').textContent = ksh(data.total_balance);
+    document.getElementById('payments-count').textContent = data.payments_count;
+    document.getElementById('active-suppliers').textContent = data.active_suppliers_count;
+    document.getElementById('recent-count').textContent = data.recent_transactions.length + ' recorded';
+
+    // Payments ticker
+    startTicker(data.payments_list, 'payments-ticker', item => `
+      <span class="ticker-dot payment"></span>
+      <span><strong>${item.supplier}</strong> — ${ksh(item.amount)} for ${item.item} <span style="color:var(--text-muted)">(${item.date})</span></span>
+    `);
+
+    // Recent transactions ticker
+    startTicker(data.recent_transactions, 'recent-ticker', item => `
+      <span class="ticker-dot ${item.type}"></span>
+      <span>
+        <strong>${item.supplier}</strong>
+        <span class="badge badge-${item.type}" style="margin:0 4px;">${item.type}</span>
+        ${ksh(item.amount)}
+        <span style="color:var(--text-muted);">(${item.date})</span>
+      </span>
+    `);
+  }
+
+  loadDashboard();
+</script>
+{% endblock %}

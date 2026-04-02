@@ -1,0 +1,18 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Access Denied — BandaFlow</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body>
+<div class="error-page">
+  <h1>403</h1>
+  <h2>Access Denied</h2>
+  <p>You don't have permission to view this page. This area is restricted to Admin users only.</p>
+  <a href="/dashboard/" class="btn btn-primary">Back to Dashboard</a>
+</div>
+</body>
+</html>

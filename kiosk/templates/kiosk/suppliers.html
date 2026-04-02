@@ -1,0 +1,304 @@
+{% extends 'kiosk/base.html' %}
+{% block title %}Suppliers — BandaFlow{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Suppliers</h2>
+    <p>Manage all your kiosk suppliers and their information.</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" onclick="openModal('add-supplier-modal')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Supplier
+    </button>
+  </div>
+</div>
+
+<div class="page-body">
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+    <div class="search-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="supplier-search" placeholder="Search by name…" oninput="filterSuppliers()" />
+    </div>
+    <div class="filter-pills">
+      <button class="pill active" onclick="setFilter('all', this)">All Suppliers</button>
+      <button class="pill" onclick="setFilter('active', this)">Active</button>
+      <button class="pill" onclick="setFilter('debt', this)">With Debt</button>
+    </div>
+  </div>
+
+  <!-- Cards -->
+  <div class="supplier-grid" id="supplier-grid">
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- Add Supplier Modal -->
+<div class="modal-overlay" id="add-supplier-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add New Supplier</h3>
+      <button class="modal-close" onclick="closeModal('add-supplier-modal')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Supplier Name</label>
+        <div class="input-wrap"><input type="text" id="add-name" placeholder="e.g. Nairobi Distributors" /></div>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <div class="input-wrap"><input type="tel" id="add-phone" placeholder="e.g. 0712 345 678" /></div>
+      </div>
+      <div class="form-group">
+        <label>Item / Product Supplied</label>
+        <div class="input-wrap"><input type="text" id="add-item" placeholder="e.g. Maize Flour" /></div>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <div class="input-wrap">
+          <select id="add-status">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Date Added</label>
+        <div class="input-wrap"><input type="text" id="add-date" readonly class="field-locked" /></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('add-supplier-modal')">Cancel</button>
+      <button class="btn btn-primary" id="add-supplier-btn" onclick="addSupplier()">Add Supplier</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Supplier Modal -->
+<div class="modal-overlay" id="edit-supplier-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Edit Supplier</h3>
+      <button class="modal-close" onclick="closeModal('edit-supplier-modal')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id" />
+      <div class="form-group">
+        <label>Supplier Name</label>
+        <div class="input-wrap"><input type="text" id="edit-name" /></div>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <div class="input-wrap"><input type="tel" id="edit-phone" /></div>
+      </div>
+      <div class="form-group">
+        <label>Item / Product Supplied</label>
+        <div class="input-wrap"><input type="text" id="edit-item" /></div>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <div class="input-wrap">
+          <select id="edit-status">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('edit-supplier-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Supplier Modal -->
+<div class="modal-overlay" id="delete-supplier-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Delete Supplier</h3>
+      <button class="modal-close" onclick="closeModal('delete-supplier-modal')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary);">Are you sure you want to delete <strong id="delete-supplier-name"></strong>? This action cannot be undone and will also delete all associated transactions.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('delete-supplier-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn" onclick="confirmDelete()">Delete Supplier</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let allSuppliers = [];
+  let currentFilter = 'all';
+  let deleteTargetId = null;
+
+  // Set today's date in add modal
+  document.getElementById('add-date').value = new Date().toLocaleDateString('en-KE', {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  // Check if URL has filter param
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('filter') === 'active') currentFilter = 'active';
+
+  async function loadSuppliers() {
+    const data = await apiFetch('/api/suppliers/');
+    allSuppliers = data.suppliers;
+    renderSuppliers();
+  }
+
+  function setFilter(filter, el) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-pills .pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    renderSuppliers();
+  }
+
+  function filterSuppliers() { renderSuppliers(); }
+
+  function renderSuppliers() {
+    const search = document.getElementById('supplier-search').value.toLowerCase();
+    let filtered = allSuppliers.filter(s => {
+      const matchSearch = s.name.toLowerCase().includes(search);
+      if (!matchSearch) return false;
+      if (currentFilter === 'active') return s.status === 'active';
+      if (currentFilter === 'debt') return parseFloat(s.balance_owed) > 0;
+      return true;
+    });
+
+    const grid = document.getElementById('supplier-grid');
+    if (!filtered.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <h3>No suppliers found</h3>
+        <p>Try adjusting your filter or search term.</p>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(s => {
+      const hasDebt = parseFloat(s.balance_owed) > 0;
+      const initial = s.name.charAt(0).toUpperCase();
+      return `
+      <div class="supplier-card">
+        <div class="supplier-card-header">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="supplier-avatar">${initial}</div>
+            <div>
+              <div class="supplier-name">${s.name}</div>
+              <div class="supplier-item">${s.item_supplied}</div>
+            </div>
+          </div>
+          <span class="badge badge-${s.status}">${s.status}</span>
+        </div>
+
+        <div class="supplier-detail-row">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 9.1 19.79 19.79 0 0 1 1.6 .45 2 2 0 0 1 3.57 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.12 6.12l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          ${s.phone}
+        </div>
+        <div class="supplier-detail-row">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Added: ${s.date_added}
+        </div>
+        <div class="supplier-detail-row">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Last transaction: ${s.last_transaction_date || 'Never'}
+        </div>
+
+        <div class="supplier-balance ${hasDebt ? 'has-debt' : 'no-debt'}">
+          <span class="balance-label">${hasDebt ? 'Balance Owed' : 'No Debt'}</span>
+          <span class="balance-amount">${hasDebt ? ksh(s.balance_owed) : '✓ Clear'}</span>
+        </div>
+
+        <div class="supplier-actions">
+          <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="openEdit(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </button>
+          <button class="btn btn-danger btn-sm" style="flex:1;" onclick="openDelete(${s.id}, '${s.name.replace(/'/g,"\\'")}')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            Delete
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function openEdit(s) {
+    document.getElementById('edit-id').value = s.id;
+    document.getElementById('edit-name').value = s.name;
+    document.getElementById('edit-phone').value = s.phone;
+    document.getElementById('edit-item').value = s.item_supplied;
+    document.getElementById('edit-status').value = s.status;
+    openModal('edit-supplier-modal');
+  }
+
+  async function saveEdit() {
+    const id = document.getElementById('edit-id').value;
+    const payload = {
+      name: document.getElementById('edit-name').value.trim(),
+      phone: document.getElementById('edit-phone').value.trim(),
+      item_supplied: document.getElementById('edit-item').value.trim(),
+      status: document.getElementById('edit-status').value,
+    };
+    const data = await apiFetch(`/api/suppliers/${id}/`, { method: 'PUT', body: JSON.stringify(payload) });
+    if (data.success) {
+      showToast('Supplier updated successfully.');
+      closeModal('edit-supplier-modal');
+      loadSuppliers();
+    }
+  }
+
+  function openDelete(id, name) {
+    deleteTargetId = id;
+    document.getElementById('delete-supplier-name').textContent = name;
+    openModal('delete-supplier-modal');
+  }
+
+  async function confirmDelete() {
+    const data = await apiFetch(`/api/suppliers/${deleteTargetId}/`, { method: 'DELETE' });
+    if (data.success) {
+      showToast('Supplier deleted.');
+      closeModal('delete-supplier-modal');
+      loadSuppliers();
+    }
+  }
+
+  async function addSupplier() {
+    const payload = {
+      name: document.getElementById('add-name').value.trim(),
+      phone: document.getElementById('add-phone').value.trim(),
+      item_supplied: document.getElementById('add-item').value.trim(),
+      status: document.getElementById('add-status').value,
+    };
+    if (!payload.name || !payload.phone || !payload.item_supplied) {
+      showToast('Please fill in all required fields.', 'error');
+      return;
+    }
+    const data = await apiFetch('/api/suppliers/', { method: 'POST', body: JSON.stringify(payload) });
+    if (data.success) {
+      showToast('Supplier added successfully.');
+      closeModal('add-supplier-modal');
+      document.getElementById('add-name').value = '';
+      document.getElementById('add-phone').value = '';
+      document.getElementById('add-item').value = '';
+      document.getElementById('add-status').value = 'active';
+      loadSuppliers();
+    }
+  }
+
+  loadSuppliers();
+</script>
+{% endblock %}

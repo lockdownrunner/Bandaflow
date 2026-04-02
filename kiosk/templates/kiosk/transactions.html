@@ -1,0 +1,316 @@
+{% extends 'kiosk/base.html' %}
+{% block title %}Transactions — BandaFlow{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Transactions</h2>
+    <p>All recorded purchases and payments.</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" onclick="openModal('record-txn-modal')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Record Transaction
+    </button>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <div class="search-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="txn-search" placeholder="Search by supplier…" oninput="loadTransactions()" />
+      </div>
+      <div class="filter-pills">
+        <button class="pill active" data-type="" onclick="setTypeFilter('', this)">All</button>
+        <button class="pill" data-type="payment" onclick="setTypeFilter('payment', this)">Payments</button>
+        <button class="pill" data-type="purchase" onclick="setTypeFilter('purchase', this)">Purchases</button>
+      </div>
+      <select class="sort-select" id="month-filter" onchange="loadTransactions()">
+        <option value="">All Months</option>
+        <option value="1">January</option><option value="2">February</option>
+        <option value="3">March</option><option value="4">April</option>
+        <option value="5">May</option><option value="6">June</option>
+        <option value="7">July</option><option value="8">August</option>
+        <option value="9">September</option><option value="10">October</option>
+        <option value="11">November</option><option value="12">December</option>
+      </select>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Supplier</th>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>Item</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="txn-tbody">
+        <tr><td colspan="6" style="padding:40px;text-align:center;color:var(--text-muted);">
+          <div class="spinner" style="margin:0 auto;"></div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Record Transaction Modal -->
+<div class="modal-overlay" id="record-txn-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Record Transaction</h3>
+      <button class="modal-close" onclick="closeModal('record-txn-modal')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Transaction Type</label>
+        <div class="input-wrap">
+          <select id="txn-type" onchange="onTypeChange()">
+            <option value="">Select type…</option>
+            <option value="payment">Payment</option>
+            <option value="purchase">Purchase</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Supplier</label>
+        <div class="input-wrap">
+          <select id="txn-supplier" onchange="onSupplierChange()" disabled>
+            <option value="">Select supplier…</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Amount (Ksh)</label>
+        <div class="input-wrap">
+          <input type="number" id="txn-amount" placeholder="0.00" min="1" step="0.01" oninput="validateAmount()" disabled />
+        </div>
+        <div class="owed-hint" id="owed-hint">Balance owed to this supplier: <strong id="owed-amount"></strong></div>
+        <div class="error-note" id="amount-error">Amount cannot exceed the balance owed to this supplier.</div>
+      </div>
+      <div class="form-group">
+        <label>Item</label>
+        <div class="input-wrap">
+          <input type="text" id="txn-item" placeholder="Auto-filled from supplier…" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('record-txn-modal')">Cancel</button>
+      <button class="btn btn-primary" id="confirm-txn-btn" onclick="confirmTransaction()" disabled>Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Transaction Modal -->
+<div class="modal-overlay" id="delete-txn-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Delete Transaction</h3>
+      <button class="modal-close" onclick="closeModal('delete-txn-modal')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary);">Are you sure you want to delete this transaction? All balances will revert to their state before this transaction was recorded.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('delete-txn-modal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmTxnDelete()">Delete Transaction</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let currentType = '';
+  let deleteTxnId = null;
+  let supplierBalances = {};
+
+  // Check URL params for pre-filtering
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('type')) {
+    currentType = params.get('type');
+    document.querySelectorAll('.filter-pills .pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.type === currentType);
+    });
+  }
+  if (params.get('month')) {
+    document.getElementById('month-filter').value = params.get('month');
+  }
+
+  function setTypeFilter(type, el) {
+    currentType = type;
+    document.querySelectorAll('.filter-pills .pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    loadTransactions();
+  }
+
+  async function loadTransactions() {
+    const search = document.getElementById('txn-search').value;
+    const month = document.getElementById('month-filter').value;
+    let url = `/api/transactions/?type=${currentType}&search=${encodeURIComponent(search)}&month=${month}`;
+    const data = await apiFetch(url);
+    renderTransactions(data.transactions);
+  }
+
+  function renderTransactions(txns) {
+    const tbody = document.getElementById('txn-tbody');
+    if (!txns.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:48px;text-align:center;color:var(--text-muted);">No transactions found.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = txns.map(t => `
+      <tr class="txn-row-${t.type}">
+        <td>${t.date}</td>
+        <td style="font-weight:500;">${t.supplier}</td>
+        <td><span class="badge badge-${t.type}">${t.type.charAt(0).toUpperCase() + t.type.slice(1)}</span></td>
+        <td style="font-weight:600;color:${t.type === 'payment' ? 'var(--payment-text)' : 'var(--purchase-text)'};">${ksh(t.amount)}</td>
+        <td style="color:var(--text-secondary);">${t.item}</td>
+        <td>
+          <button class="btn btn-ghost btn-icon" title="Delete transaction" onclick="openDeleteTxn(${t.id})" style="color:var(--danger);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // Modal logic
+  async function onTypeChange() {
+    const type = document.getElementById('txn-type').value;
+    const supplierSelect = document.getElementById('txn-supplier');
+    const amountInput = document.getElementById('txn-amount');
+    supplierSelect.innerHTML = '<option value="">Select supplier…</option>';
+    supplierSelect.disabled = !type;
+    amountInput.disabled = true;
+    document.getElementById('owed-hint').classList.remove('show');
+    document.getElementById('amount-error').classList.remove('show');
+    document.getElementById('confirm-txn-btn').disabled = true;
+    document.getElementById('txn-item').value = '';
+
+    if (!type) return;
+
+    const endpoint = type === 'payment' ? '/api/suppliers/with-debt/' : '/api/suppliers/active/';
+    const data = await apiFetch(endpoint);
+    supplierBalances = {};
+    data.suppliers.forEach(s => {
+      supplierBalances[s.id] = { balance: s.balance_owed, item: s.item_supplied };
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      supplierSelect.appendChild(opt);
+    });
+    supplierSelect.disabled = false;
+  }
+
+  function onSupplierChange() {
+    const type = document.getElementById('txn-type').value;
+    const supplierId = document.getElementById('txn-supplier').value;
+    const amountInput = document.getElementById('txn-amount');
+    const owedHint = document.getElementById('owed-hint');
+    const confirmBtn = document.getElementById('confirm-txn-btn');
+
+    if (!supplierId) { amountInput.disabled = true; confirmBtn.disabled = true; return; }
+
+    const info = supplierBalances[supplierId];
+    if (info) {
+      document.getElementById('txn-item').value = info.item;
+    }
+
+    amountInput.disabled = false;
+    amountInput.value = '';
+    confirmBtn.disabled = true;
+
+    if (type === 'payment' && info) {
+      owedHint.classList.add('show');
+      document.getElementById('owed-amount').textContent = ksh(info.balance);
+    } else {
+      owedHint.classList.remove('show');
+    }
+    document.getElementById('amount-error').classList.remove('show');
+  }
+
+  function validateAmount() {
+    const type = document.getElementById('txn-type').value;
+    const supplierId = document.getElementById('txn-supplier').value;
+    const amount = parseFloat(document.getElementById('txn-amount').value) || 0;
+    const confirmBtn = document.getElementById('confirm-txn-btn');
+    const errorNote = document.getElementById('amount-error');
+
+    if (amount <= 0) { confirmBtn.disabled = true; return; }
+
+    if (type === 'payment' && supplierId) {
+      const owed = parseFloat(supplierBalances[supplierId]?.balance || 0);
+      if (amount > owed) {
+        errorNote.classList.add('show');
+        confirmBtn.disabled = true;
+        return;
+      }
+    }
+    errorNote.classList.remove('show');
+    confirmBtn.disabled = !supplierId;
+  }
+
+  async function confirmTransaction() {
+    const type = document.getElementById('txn-type').value;
+    const supplierId = document.getElementById('txn-supplier').value;
+    const amount = document.getElementById('txn-amount').value;
+    const item = document.getElementById('txn-item').value.trim();
+
+    const data = await apiFetch('/api/transactions/', {
+      method: 'POST',
+      body: JSON.stringify({ type, supplier_id: supplierId, amount, item })
+    });
+
+    if (data.success) {
+      showToast('Transaction recorded successfully.');
+      closeModal('record-txn-modal');
+      resetTransactionForm();
+      loadTransactions();
+    } else {
+      showToast(data.error || 'Error recording transaction.', 'error');
+    }
+  }
+
+  function resetTransactionForm() {
+    document.getElementById('txn-type').value = '';
+    document.getElementById('txn-supplier').innerHTML = '<option value="">Select supplier…</option>';
+    document.getElementById('txn-supplier').disabled = true;
+    document.getElementById('txn-amount').value = '';
+    document.getElementById('txn-amount').disabled = true;
+    document.getElementById('txn-item').value = '';
+    document.getElementById('owed-hint').classList.remove('show');
+    document.getElementById('amount-error').classList.remove('show');
+    document.getElementById('confirm-txn-btn').disabled = true;
+  }
+
+  function openDeleteTxn(id) {
+    deleteTxnId = id;
+    openModal('delete-txn-modal');
+  }
+
+  async function confirmTxnDelete() {
+    const data = await apiFetch(`/api/transactions/${deleteTxnId}/delete/`, { method: 'DELETE' });
+    if (data.success) {
+      showToast('Transaction deleted and balances updated.');
+      closeModal('delete-txn-modal');
+      loadTransactions();
+    }
+  }
+
+  // Reset modal on close
+  document.getElementById('record-txn-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('record-txn-modal')) resetTransactionForm();
+  });
+
+  loadTransactions();
+</script>
+{% endblock %}
